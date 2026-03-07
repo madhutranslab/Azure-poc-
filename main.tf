@@ -109,3 +109,57 @@ resource "azurerm_shared_image_gallery" "sig" {
   location            = azurerm_resource_group.rg.location
   description         = "Shared images for the organization"
 }
+resource "azurerm_shared_image" "example_image" {
+  name                = "linuxImageDef"
+  gallery_name        = azurerm_shared_image_gallery.sig.name
+  resource_group_name = azurerm_shared_image_gallery.sig.resource_group_name
+  location            = azurerm_shared_image_gallery.sig.location
+  os_type             = "Linux"
+  hyper_v_generation  = "V2"
+ 
+  identifier {
+    publisher = "mycompany"
+    offer     = "linuxVM"
+    sku       = "rhel9"
+  }
+}
+data "azurerm_virtual_machine" "existing_vm" {
+  name                = azurerm_linux_virtual_machine.rg.name
+  resource_group_name = azurerm_resource_group.rg.name
+}
+resource "azurerm_shared_image_version" "linux_image_version" {
+  name                = "1.0.0"                               # version of the image
+  resource_group_name = azurerm_resource_group.rg.name
+  gallery_name        = azurerm_shared_image_gallery.sig.name
+  image_name          = azurerm_shared_image.example_image.name
+  location            = azurerm_shared_image_gallery.sig.location
+  managed_image_id    = data.azurerm_virtual_machine.existing_vm.id
+
+  target_region {
+    name                   = azurerm_shared_image_gallery.sig.location
+    regional_replica_count  = 1        # required: number of replicas in this region
+    # optional: storage account type
+    # storage_account_type = "Standard_LRS"
+  }
+}
+resource "azurerm_linux_virtual_machine" "new_vm" {
+  name                  = "newLinuxVM"
+  resource_group_name   = azurerm_resource_group.rg.name
+  location              = azurerm_resource_group.rg.location
+  size                  = "Standard_B1s"
+  admin_username        = "azureuser"
+  network_interface_ids = [azurerm_network_interface.example.id]
+
+  source_image_id = azurerm_shared_image_version.linux_image_version.id
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+    disk_size_gb         = 30
+  }
+}
