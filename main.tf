@@ -148,8 +148,7 @@ resource "azurerm_shared_image_version" "linux_image_version" {
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
   image_name          = azurerm_shared_image.example_image.name
   location            = azurerm_shared_image_gallery.sig[0].location
-   managed_image_id    = azurerm_shared_image.example_image.id
-
+   managed_image_id = azurerm_image.my_managed_image.id
   target_region {
     name                   = azurerm_shared_image_gallery.sig[0].location
     regional_replica_count  = 1     
