@@ -229,10 +229,10 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
     disk_size_gb         = 30
   }
 
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "22.04-LTS"
-    version   = "latest"
-  }
+source_image_reference {
+  publisher = "RedHat"       # Correct publisher
+  offer     = "RHEL"         # Correct offer
+  sku       = "9-gen2"       # Available SKU in your region
+  version   = "latest"       # Must be a string
+}
 }
