@@ -112,8 +112,8 @@ resource "azurerm_shared_image_gallery" "sig" {
 resource "azurerm_shared_image" "example_image" {
   name                = "linuxImageDef"
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
-  resource_group_name = azurerm_shared_image_gallery.sig.resource_group_name
-  location            = azurerm_shared_image_gallery.sig.location
+  resource_group_name = azurerm_shared_image_gallery.sig[0].resource_group_name
+  location            = azurerm_shared_image_gallery.sig[0].location
   os_type             = "Linux"
   hyper_v_generation  = "V2"
  
