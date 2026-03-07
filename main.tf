@@ -134,7 +134,7 @@ resource "azurerm_image" "my_managed_image" {
   name                = "linuxManagedImage"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-
+ source_virtual_machine_id = azurerm_linux_virtual_machine.vm.id
   os_disk {
     os_type  = "Linux"
     blob_uri = "" # optional, if capturing from VM snapshot
