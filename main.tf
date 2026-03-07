@@ -1,8 +1,14 @@
+############################################################
+# Resource Group
+############################################################
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
 }
 
+############################################################
+# Virtual Network and Subnet
+############################################################
 resource "azurerm_virtual_network" "vnet" {
   name                = var.vnet_name
   address_space       = var.vnet_address_space
@@ -17,6 +23,9 @@ resource "azurerm_subnet" "subnet" {
   resource_group_name  = azurerm_resource_group.rg.name
 }
 
+############################################################
+# Public IP
+############################################################
 resource "azurerm_public_ip" "pip" {
   name                = var.public_ip_name
   location            = azurerm_resource_group.rg.location
@@ -24,6 +33,9 @@ resource "azurerm_public_ip" "pip" {
   allocation_method   = "Static"
 }
 
+############################################################
+# Network Security Group
+############################################################
 resource "azurerm_network_security_group" "nsg" {
   name                = var.nsg_name
   location            = azurerm_resource_group.rg.location
@@ -42,6 +54,9 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
+############################################################
+# Network Interface
+############################################################
 resource "azurerm_network_interface" "nic" {
   name                = var.nic_name
   location            = azurerm_resource_group.rg.location
@@ -60,6 +75,9 @@ resource "azurerm_network_interface_security_group_association" "nic_nsg" {
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
 
+############################################################
+# Linux VM
+############################################################
 resource "azurerm_linux_virtual_machine" "vm" {
   name                  = var.vm_name
   resource_group_name   = azurerm_resource_group.rg.name
@@ -85,6 +103,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 }
+
+############################################################
+# Shared Image Gallery (check if exists first)
+############################################################
 data "external" "sig_check" {
   program = ["bash", "-c", <<EOT
 RG_NAME="${azurerm_resource_group.rg.name}"
@@ -96,7 +118,6 @@ if az sig show --name "$SIG_NAME" --resource-group "$RG_NAME" >/dev/null 2>&1; t
   exists="true"
 fi
 
-# Use $$ to escape $ so Terraform doesn't try to interpolate
 echo "{\"exists\": \"$$exists\"}"
 EOT
   ]
@@ -110,7 +131,9 @@ resource "azurerm_shared_image_gallery" "sig" {
   description         = "Shared images for the organization"
 }
 
-
+############################################################
+# Shared Image Definition
+############################################################
 resource "azurerm_shared_image" "example_image" {
   name                = "linuxImageDef"
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
@@ -118,46 +141,49 @@ resource "azurerm_shared_image" "example_image" {
   location            = azurerm_shared_image_gallery.sig[0].location
   os_type             = "Linux"
   hyper_v_generation  = "V2"
- 
+
   identifier {
     publisher = "mycompany"
     offer     = "linuxVM"
     sku       = "rhel9"
   }
 }
-  data "azurerm_managed_disk" "vm_os_disk" {
-  name                = azurerm_linux_virtual_machine.vm.os_disk[0].name  # disk name
-  resource_group_name = azurerm_resource_group.rg.name
-}
-  # Create a Managed Image from an existing VM
+
+############################################################
+# Managed Image from VM (fixes all managed_disk_id errors)
+############################################################
 resource "azurerm_image" "my_managed_image" {
   name                = "linuxManagedImage"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
- source_virtual_machine_id = azurerm_linux_virtual_machine.vm.id
-  os_disk {
-    os_type  = "Linux"
-    blob_uri = "" # optional, if capturing from VM snapshot
-    managed_disk_id = azurerm_linux_virtual_machine.vm.os_disk[0].managed_disk_id
-    storage_type            = "Standard_LRS"
-  }
+
+  # ✅ This replaces the broken os_disk.managed_disk_id
+  source_virtual_machine_id = azurerm_linux_virtual_machine.vm.id
 }
+
+############################################################
+# Shared Image Version
+############################################################
 resource "azurerm_shared_image_version" "linux_image_version" {
-  name                = "1.0.0"                               # version of the image
+  name                = "1.0.0"
   resource_group_name = azurerm_resource_group.rg.name
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
   image_name          = azurerm_shared_image.example_image.name
   location            = azurerm_shared_image_gallery.sig[0].location
-   managed_image_id = azurerm_image.my_managed_image.id
+
+  managed_image_id = azurerm_image.my_managed_image.id
+
   target_region {
     name                   = azurerm_shared_image_gallery.sig[0].location
-    regional_replica_count  = 1     
-       # required: number of replicas in this region
-    # optional: storage account type
-    # storage_account_type = "Standard_LRS"
+    regional_replica_count  = 1
+    storage_type            = "Standard_LRS"   # ✅ required
   }
 }
-# Virtual Network
+
+############################################################
+# Additional Virtual Network, Subnet, NIC, and VM
+# (Your secondary VM example)
+############################################################
 resource "azurerm_virtual_network" "vnet1" {
   name                = "myVNet"
   resource_group_name = azurerm_resource_group.rg.name
@@ -165,7 +191,6 @@ resource "azurerm_virtual_network" "vnet1" {
   address_space       = ["10.0.0.0/16"]
 }
 
-# Subnet
 resource "azurerm_subnet" "subnet1" {
   name                 = "mySubnet"
   resource_group_name  = azurerm_resource_group.rg.name
@@ -173,7 +198,6 @@ resource "azurerm_subnet" "subnet1" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# Network Interface
 resource "azurerm_network_interface" "example1" {
   name                = "myNIC"
   location            = azurerm_resource_group.rg.location
@@ -186,7 +210,6 @@ resource "azurerm_network_interface" "example1" {
   }
 }
 
-# Linux VM
 resource "azurerm_linux_virtual_machine" "new_vm" {
   name                  = "myLinuxVM"
   resource_group_name   = azurerm_resource_group.rg.name
