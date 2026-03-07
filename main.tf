@@ -125,6 +125,10 @@ resource "azurerm_shared_image" "example_image" {
     sku       = "rhel9"
   }
 }
+  data "azurerm_managed_disk" "vm_os_disk" {
+  name                = azurerm_linux_virtual_machine.vm.os_disk[0].name  # disk name
+  resource_group_name = azurerm_resource_group.rg.name
+}
   # Create a Managed Image from an existing VM
 resource "azurerm_image" "my_managed_image" {
   name                = "linuxManagedImage"
