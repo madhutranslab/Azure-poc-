@@ -111,7 +111,7 @@ resource "azurerm_shared_image_gallery" "sig" {
 }
 resource "azurerm_shared_image" "example_image" {
   name                = "linuxImageDef"
-  gallery_name        = azurerm_shared_image_gallery.sig.name
+  gallery_name        = azurerm_shared_image_gallery.sig[0].name
   resource_group_name = azurerm_shared_image_gallery.sig.resource_group_name
   location            = azurerm_shared_image_gallery.sig.location
   os_type             = "Linux"
@@ -130,9 +130,9 @@ data "azurerm_virtual_machine" "existing_vm" {
 resource "azurerm_shared_image_version" "linux_image_version" {
   name                = "1.0.0"                               # version of the image
   resource_group_name = azurerm_resource_group.rg.name
-  gallery_name        = azurerm_shared_image_gallery.sig.name
+  gallery_name        = azurerm_shared_image_gallery.sig[0].name
   image_name          = azurerm_shared_image.example_image.name
-  location            = azurerm_shared_image_gallery.sig.location
+  location            = azurerm_shared_image_gallery.sig[0].location
   managed_image_id    = data.azurerm_virtual_machine.existing_vm.id
 
   target_region {
