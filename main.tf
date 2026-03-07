@@ -85,21 +85,22 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 }
-# Check if the SIG exists using Azure CLI
+# Check if SIG exists using Azure CLI in PowerShell
 data "external" "sig_check" {
-  program = ["bash", "-c", <<EOT
-    if az sig show --name my_shared_gallery --resource-group ${azurerm_resource_group.rg.name} >/dev/null 2>&1; then
-      echo '{"exists": true}'
-    else
-      echo '{"exists": false}'
-    fi
+  program = ["powershell", "-Command", <<EOT
+    try {
+        az sig show --name my_shared_gallery --resource-group ${azurerm_resource_group.rg.name} | Out-Null
+        Write-Output '{"exists": "true"}'
+    } catch {
+        Write-Output '{"exists": "false"}'
+    }
 EOT
   ]
 }
 
 # Create SIG only if it doesn't exist
 resource "azurerm_shared_image_gallery" "sig" {
-  count               = data.external.sig_check.result.exists ? 0 : 1
+  count               = data.external.sig_check.result.exists == "true" ? 1 : 1
   name                = "my_shared_gallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
