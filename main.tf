@@ -87,15 +87,15 @@ resource "azurerm_linux_virtual_machine" "vm" {
 }
 data "external" "sig_check" {
   program = ["bash", "-c", <<EOT
-# Default to false
+RG_NAME="${azurerm_resource_group.rg.name}"
+SIG_NAME="my_shared_gallery"
+
 exists="false"
 
-# Try to see if SIG exists
-if az sig show --name my_shared_gallery --resource-group ${azurerm_resource_group.rg.name} >/dev/null 2>&1; then
+if az sig show --name \"$SIG_NAME\" --resource-group \"$RG_NAME\" >/dev/null 2>&1; then
   exists="true"
 fi
 
-# Always output valid JSON
 echo "{\"exists\": \"${exists}\"}"
 EOT
   ]
