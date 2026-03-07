@@ -176,7 +176,7 @@ resource "azurerm_shared_image_version" "linux_image_version" {
   target_region {
     name                   = azurerm_shared_image_gallery.sig[0].location
     regional_replica_count  = 1
-    storage_type            = "Standard_LRS"   # ✅ required
+    storage_account_type   = "Standard_LRS"   # ✅ required
   }
 }
 
