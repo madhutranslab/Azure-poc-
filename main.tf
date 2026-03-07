@@ -129,10 +129,9 @@ resource "azurerm_shared_image_version" "linux_image_version" {
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
   image_name          = azurerm_shared_image.example_image.name
   location            = azurerm_shared_image_gallery.sig[0].location
-  managed_image_id    = data.azurerm_virtual_machine.existing_vm.id
 
   target_region {
-    name                   = azurerm_shared_image_gallery.sig.location
+    name                   = azurerm_shared_image_gallery.sig[0].location
     regional_replica_count  = 1        # required: number of replicas in this region
     # optional: storage account type
     # storage_account_type = "Standard_LRS"
