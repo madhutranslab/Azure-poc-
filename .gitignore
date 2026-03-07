@@ -7,10 +7,8 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-terraform.tfvars
 
 # Terraform variable files
-terraform.tfvars
 *.auto.tfvars
 
 # Terraform lock file
