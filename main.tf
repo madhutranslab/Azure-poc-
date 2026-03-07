@@ -85,14 +85,18 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 }
-## Check if SIG exists using Azure CLI on Linux
 data "external" "sig_check" {
   program = ["bash", "-c", <<EOT
+# Default to false
+exists="false"
+
+# Try to see if SIG exists
 if az sig show --name my_shared_gallery --resource-group ${azurerm_resource_group.rg.name} >/dev/null 2>&1; then
-  echo '{"exists": "true"}'
-else
-  echo '{"exists": "false"}'
+  exists="true"
 fi
+
+# Always output valid JSON
+echo "{\"exists\": \"${exists}\"}"
 EOT
   ]
 }
