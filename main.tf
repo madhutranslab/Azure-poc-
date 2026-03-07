@@ -85,18 +85,21 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 }
-# Try to read an existing SIG
-data "azurerm_shared_image_gallery" "existing" {
-  name                = "my_shared_gallery"
-  resource_group_name = azurerm_resource_group.rg.name
-
-  # Use ignore_errors = true to prevent Terraform from failing if not found
-  # Note: In Terraform 1.5+, try/catch can also be used
+# Check if the SIG exists using Azure CLI
+data "external" "sig_check" {
+  program = ["bash", "-c", <<EOT
+    if az sig show --name my_shared_gallery --resource-group ${azurerm_resource_group.rg.name} >/dev/null 2>&1; then
+      echo '{"exists": true}'
+    else
+      echo '{"exists": false}'
+    fi
+EOT
+  ]
 }
 
 # Create SIG only if it doesn't exist
 resource "azurerm_shared_image_gallery" "sig" {
-  count               = try(data.azurerm_shared_image_gallery.existing.id != "", 0, 1)
+  count               = data.external.sig_check.result.exists ? 0 : 1
   name                = "my_shared_gallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
