@@ -78,6 +78,5 @@ output "new_vm_name" {
 }
 
 output "new_vm_nic_id" {
-  description = "The NIC ID of the second Linux VM"
-  value       = azurerm_network_interface.example1.id
+  value = azurerm_network_interface.new_vm_nic.id
 }

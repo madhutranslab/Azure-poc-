@@ -76,7 +76,7 @@ resource "azurerm_network_interface_security_group_association" "nic_nsg" {
 }
 
 ############################################################
-# Linux VM
+# Original Linux VM (to capture)
 ############################################################
 resource "azurerm_linux_virtual_machine" "vm" {
   name                  = var.vm_name
@@ -105,30 +105,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
 }
 
 ############################################################
-# Shared Image Gallery (check if exists first)
+# Shared Image Gallery
 ############################################################
-data "external" "sig_check" {
-  program = ["bash", "-c", <<EOT
-RG_NAME="${azurerm_resource_group.rg.name}"
-SIG_NAME="my_shared_gallery"
-
-exists="false"
-
-if az sig show --name "$SIG_NAME" --resource-group "$RG_NAME" >/dev/null 2>&1; then
-  exists="true"
-fi
-
-echo "{\"exists\": \"$$exists\"}"
-EOT
-  ]
-}
-
 resource "azurerm_shared_image_gallery" "sig" {
-  count               = data.external.sig_check.result.exists == "true" ? 0 : 1
   name                = "my_shared_gallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   description         = "Shared images for the organization"
+
+  lifecycle {
+    ignore_changes = [description]
+  }
 }
 
 ############################################################
@@ -136,9 +123,9 @@ resource "azurerm_shared_image_gallery" "sig" {
 ############################################################
 resource "azurerm_shared_image" "example_image" {
   name                = "linuxImageDef"
-  gallery_name        = azurerm_shared_image_gallery.sig[0].name
-  resource_group_name = azurerm_shared_image_gallery.sig[0].resource_group_name
-  location            = azurerm_shared_image_gallery.sig[0].location
+  gallery_name        = azurerm_shared_image_gallery.sig.name
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
   os_type             = "Linux"
   hyper_v_generation  = "V2"
 
@@ -150,14 +137,12 @@ resource "azurerm_shared_image" "example_image" {
 }
 
 ############################################################
-# Managed Image from VM (fixes all managed_disk_id errors)
+# Managed Image from VM
 ############################################################
 resource "azurerm_image" "my_managed_image" {
-  name                = "linuxManagedImage"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  # ✅ This replaces the broken os_disk.managed_disk_id
+  name                      = "linuxManagedImage"
+  location                  = azurerm_resource_group.rg.location
+  resource_group_name       = azurerm_resource_group.rg.name
   source_virtual_machine_id = azurerm_linux_virtual_machine.vm.id
 }
 
@@ -167,39 +152,24 @@ resource "azurerm_image" "my_managed_image" {
 resource "azurerm_shared_image_version" "linux_image_version" {
   name                = "1.0.0"
   resource_group_name = azurerm_resource_group.rg.name
-  gallery_name        = azurerm_shared_image_gallery.sig[0].name
+  gallery_name        = azurerm_shared_image_gallery.sig.name
   image_name          = azurerm_shared_image.example_image.name
-  location            = azurerm_shared_image_gallery.sig[0].location
+  location            = azurerm_resource_group.rg.location
 
   managed_image_id = azurerm_image.my_managed_image.id
 
   target_region {
-    name                   = azurerm_shared_image_gallery.sig[0].location
+    name                   = azurerm_resource_group.rg.location
     regional_replica_count  = 1
-    storage_account_type   = "Standard_LRS"   # ✅ required
+    storage_account_type   = "Standard_LRS"
   }
 }
 
 ############################################################
-# Additional Virtual Network, Subnet, NIC, and VM
-# (Your secondary VM example)
+# New Linux VM from Shared Image
 ############################################################
-resource "azurerm_virtual_network" "vnet1" {
-  name                = "myVNet"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  address_space       = ["10.0.0.0/16"]
-}
-
-resource "azurerm_subnet" "subnet1" {
-  name                 = "mySubnet"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
-}
-
-resource "azurerm_network_interface" "example1" {
-  name                = "myNIC"
+resource "azurerm_network_interface" "new_vm_nic" {
+  name                = "newVmNIC"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
@@ -211,28 +181,29 @@ resource "azurerm_network_interface" "example1" {
 }
 
 resource "azurerm_linux_virtual_machine" "new_vm" {
-  name                  = "myLinuxVM"
+  name                  = "myLinuxVMNew"
   resource_group_name   = azurerm_resource_group.rg.name
   location              = azurerm_resource_group.rg.location
   size                  = "Standard_B1s"
   admin_username        = "azureuser"
-  network_interface_ids = [azurerm_network_interface.example1.id]
-  disable_password_authentication = true   # this must stay true for security
+  network_interface_ids = [azurerm_network_interface.new_vm_nic.id]
+  disable_password_authentication = true
 
   admin_ssh_key {
     username   = "azureuser"
     public_key = file("${path.module}/ssh/id_rsa.pub")
   }
+
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
     disk_size_gb         = 30
   }
 
-source_image_reference {
+  source_image_reference {
   publisher = "RedHat"       # Correct publisher
   offer     = "RHEL"         # Correct offer
   sku       = "9-gen2"       # Available SKU in your region
   version   = "latest"       # Must be a string
 }
-}
+  }
