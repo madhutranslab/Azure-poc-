@@ -92,18 +92,18 @@ SIG_NAME="my_shared_gallery"
 
 exists="false"
 
-if az sig show --name \"$SIG_NAME\" --resource-group \"$RG_NAME\" >/dev/null 2>&1; then
+if az sig show --name "$SIG_NAME" --resource-group "$RG_NAME" >/dev/null 2>&1; then
   exists="true"
 fi
 
-echo "{\"exists\": \"${exists}\"}"
+# Use $$ to escape $ so Terraform doesn't try to interpolate
+echo "{\"exists\": \"$$exists\"}"
 EOT
   ]
 }
 
-# Create SIG only if it doesn't exist
 resource "azurerm_shared_image_gallery" "sig" {
-  count               = data.external.sig_check.result.exists == "true" ? 1 : 0
+  count               = data.external.sig_check.result.exists == "true" ? 0 : 1
   name                = "my_shared_gallery"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
