@@ -139,7 +139,7 @@ resource "azurerm_shared_image_version" "linux_image_version" {
   }
 }
 # Virtual Network
-resource "azurerm_virtual_network" "vnet" {
+resource "azurerm_virtual_network" "vnet1" {
   name                = "myVNet"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -147,7 +147,7 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 # Subnet
-resource "azurerm_subnet" "subnet" {
+resource "azurerm_subnet" "subnet1" {
   name                 = "mySubnet"
   resource_group_name  = azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.vnet.name
@@ -155,7 +155,7 @@ resource "azurerm_subnet" "subnet" {
 }
 
 # Network Interface
-resource "azurerm_network_interface" "example" {
+resource "azurerm_network_interface" "example1" {
   name                = "myNIC"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
@@ -174,7 +174,7 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
   location              = azurerm_resource_group.rg.location
   size                  = "Standard_B1s"
   admin_username        = "azureuser"
-  network_interface_ids = [azurerm_network_interface.example.id]
+  network_interface_ids = [azurerm_network_interface.example1.id]
 
   os_disk {
     caching              = "ReadWrite"
