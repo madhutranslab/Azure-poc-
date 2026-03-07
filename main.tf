@@ -123,10 +123,6 @@ resource "azurerm_shared_image" "example_image" {
     sku       = "rhel9"
   }
 }
-data "azurerm_virtual_machine" "existing_vm" {
-  name                = azurerm_linux_virtual_machine.rg.name
-  resource_group_name = azurerm_resource_group.rg.name
-}
 resource "azurerm_shared_image_version" "linux_image_version" {
   name                = "1.0.0"                               # version of the image
   resource_group_name = azurerm_resource_group.rg.name
