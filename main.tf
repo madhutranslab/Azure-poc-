@@ -217,7 +217,12 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
   size                  = "Standard_B1s"
   admin_username        = "azureuser"
   network_interface_ids = [azurerm_network_interface.example1.id]
+  disable_password_authentication = true   # this must stay true for security
 
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("${path.module}/ssh/id_rsa.pub")
+  }
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
