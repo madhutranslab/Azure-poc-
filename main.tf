@@ -109,6 +109,8 @@ resource "azurerm_shared_image_gallery" "sig" {
   location            = azurerm_resource_group.rg.location
   description         = "Shared images for the organization"
 }
+
+
 resource "azurerm_shared_image" "example_image" {
   name                = "linuxImageDef"
   gallery_name        = azurerm_shared_image_gallery.sig[0].name
@@ -123,6 +125,19 @@ resource "azurerm_shared_image" "example_image" {
     sku       = "rhel9"
   }
 }
+  # Create a Managed Image from an existing VM
+resource "azurerm_image" "my_managed_image" {
+  name                = "linuxManagedImage"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  os_disk {
+    os_type  = "Linux"
+    blob_uri = "" # optional, if capturing from VM snapshot
+    managed_disk_id = azurerm_linux_virtual_machine.vm.os_disk[0].managed_disk_id
+    storage_type            = "Standard_LRS"
+  }
+}
 resource "azurerm_shared_image_version" "linux_image_version" {
   name                = "1.0.0"                               # version of the image
   resource_group_name = azurerm_resource_group.rg.name
@@ -133,7 +148,8 @@ resource "azurerm_shared_image_version" "linux_image_version" {
 
   target_region {
     name                   = azurerm_shared_image_gallery.sig[0].location
-    regional_replica_count  = 1        # required: number of replicas in this region
+    regional_replica_count  = 1     
+       # required: number of replicas in this region
     # optional: storage account type
     # storage_account_type = "Standard_LRS"
   }
