@@ -1,4 +1,4 @@
-# Output the Resource Group name
+/*# Output the Resource Group name
 output "resource_group_name" {
   description = "The name of the resource group"
   value       = azurerm_resource_group.rg.name
@@ -44,7 +44,7 @@ output "nic_id" {
   value       = azurerm_network_interface.nic.id
 }
 
-/*# Output Linux VM
+# Output Linux VM
 output "vm_name" {
   description = "The name of the Linux VM"
   value       = azurerm_linux_virtual_machine.vm.name
