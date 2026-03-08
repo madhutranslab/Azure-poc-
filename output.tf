@@ -56,7 +56,7 @@ output "vm_public_ip" {
 }
 
 # Output Shared Image Gallery and Image
-output "sig_name" {
+/*output "sig_name" {
   description = "The name of the Shared Image Gallery"
   value       = azurerm_shared_image_gallery.sig.*.name
 }
@@ -85,7 +85,7 @@ output "new_vm_nic_id" {
 # Output Subscription and Tenant Info
 ############################################################
 
-/*output "vm_name" {
+output "vm_name" {
   description = "Virtual Machine Name"
   value       = azurerm_linux_virtual_machine.example.name
 }
