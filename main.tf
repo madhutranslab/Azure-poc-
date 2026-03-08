@@ -324,7 +324,7 @@ resource "null_resource" "deprovision_vm" {
       type        = "ssh"
       host        = var.public_ip_name
       user        = var.admin_username
-      private_key = file("${path.module}/ssh/id_rsa.pub")
+      private_key = file("${path.module}/ssh/id_rsa")
       timeout     = "5m"
     }
   }
