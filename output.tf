@@ -84,66 +84,42 @@ output "new_vm_nic_id" {
 ############################################################
 # Output Subscription and Tenant Info
 ############################################################
-output "subscription_id" {
-  description = "Azure subscription ID used for deployment"
-  value       = data.azurerm_client_config.current.subscription_id
+output "resource_group_name" {
+  description = "Resource Group Name"
+  value       = azurerm_resource_group.example.name
 }
 
-output "tenant_id" {
-  description = "Azure tenant ID"
-  value       = data.azurerm_client_config.current.tenant_id
+output "vm_name" {
+  description = "Virtual Machine Name"
+  value       = azurerm_linux_virtual_machine.example.name
 }
 
-############################################################
-# Output Managed Image Info
-############################################################
-output "golden_image_id" {
-  description = "Managed image ID created from existing VM"
-  value       = azurerm_image.golden_image.id
+output "vm_id" {
+  description = "Virtual Machine ID"
+  value       = azurerm_linux_virtual_machine.example.id
 }
 
-output "golden_image_name" {
-  description = "Managed image name"
-  value       = azurerm_image.golden_image.name
+output "vm_private_ip" {
+  description = "Private IP Address of VM"
+  value       = azurerm_network_interface.example.private_ip_address
 }
 
-############################################################
-# Output Shared Image Gallery Info
-############################################################
-output "sig_name" {
-  description = "Shared Image Gallery name"
-  value       = azurerm_shared_image_gallery.sig.name
+output "network_interface_id" {
+  description = "Network Interface ID"
+  value       = azurerm_network_interface.example.id
 }
 
-output "sig_location" {
-  description = "Location of the Shared Image Gallery"
-  value       = azurerm_shared_image_gallery.sig.location
+output "shared_image_gallery_name" {
+  description = "Compute Gallery Name"
+  value       = data.azurerm_shared_image_gallery.example.name
 }
 
-output "shared_image_definition_name" {
-  description = "Shared Image Definition name"
-  value       = azurerm_shared_image.sig_image.name
+output "shared_image_name" {
+  description = "Shared Image Name"
+  value       = data.azurerm_shared_image.example.name
 }
 
-output "shared_image_version" {
-  description = "Shared Image Version"
-  value       = azurerm_shared_image_version.sig_version.name
-}
-
-############################################################
-# Output New VM Info
-############################################################
-output "new_vm_name" {
-  description = "Name of the newly deployed VM"
-  value       = azurerm_linux_virtual_machine.new_vm.name
-}
-
-output "new_vm_private_ip" {
-  description = "Private IP address of the new VM"
-  value       = azurerm_network_interface.new_vm_nic.ip_configuration[0].private_ip_address
-}
-
-output "new_vm_nic_id" {
-  description = "NIC ID attached to the new VM"
-  value       = azurerm_network_interface.new_vm_nic.id
+output "shared_image_version_id" {
+  description = "Shared Image Version ID"
+  value       = data.azurerm_shared_image_version.example.id
 }
