@@ -372,7 +372,7 @@ resource "azurerm_linux_virtual_machine" "example" {
   name                = "example-machine"
   resource_group_name = data.azurerm_resource_group.example.name
   location            = data.azurerm_resource_group.example.location
-  size                = "Standard_F2"
+  size                =  "Standard_D2s_v3"
   admin_username      = "adminuser"
 
   network_interface_ids = [
