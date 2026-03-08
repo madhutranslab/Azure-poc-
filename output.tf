@@ -84,10 +84,6 @@ output "new_vm_nic_id" {
 ############################################################
 # Output Subscription and Tenant Info
 ############################################################
-output "resource_group_name" {
-  description = "Resource Group Name"
-  value       = azurerm_resource_group.example.name
-}
 
 output "vm_name" {
   description = "Virtual Machine Name"
