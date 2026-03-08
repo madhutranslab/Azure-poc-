@@ -318,287 +318,80 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
 
 # ─────────────────────────────────────────
 
-resource "null_resource" "deprovision_vm" {
- 
-  triggers = {
-
-    vm_name    = var.vm_name
-
-    always_run = timestamp()
-
-  }
- 
-  provisioner "remote-exec" {
-
-    inline = [
-
-      # ✅ Log start
-
-      "echo '========================================='",
-
-      "echo 'STEP 1: Starting VM Deprovision...'",
-
-      "echo 'Timestamp: ' $(date)",
-
-      "echo 'Hostname: ' $(hostname)",
-
-      "echo '========================================='",
- 
-      # ✅ Run deprovision
-
-      "sudo waagent -deprovision+user -force 2>&1 | tee /tmp/deprovision.log",
- 
-      # ✅ Log completion
-
-      "echo 'Deprovision Complete!'",
-
-      "cat /tmp/deprovision.log",
-
-      "echo '========================================='",
-
-    ]
- 
-    connection {
-
-      type        = "ssh"
-
-      host        = data.azurerm_public_ip.vm_pip.ip_address
-
-      user        = var.admin_username
-
-      private_key = file(var.ssh_private_key_path)
-
-      timeout     = "5m"
-
-    }
-
-  }
-
+resource "azurerm_resource_group" "example" {
+  name     = "linux-rg"
+  location = "Australia East"
 }
- 
-# ─────────────────────────────────────────
 
-# STEP 2 — Deallocate + Generalize VM
-
-# ─────────────────────────────────────────
-
-resource "null_resource" "generalize_vm" {
-
-  depends_on = [null_resource.deprovision_vm]
- 
-  triggers = {
-
-    deprovision_id = null_resource.deprovision_vm.id
-
-  }
- 
-  provisioner "local-exec" {
-
-    command = <<EOT
-
-      echo "========================================="
-
-      echo "STEP 2: Starting Deallocation..."
-
-      echo "Timestamp: $(date)"
-
-      echo "========================================="
- 
-      # Deallocate VM
-
-      az vm deallocate \
-
-        --resource-group ${var.resource_group_name} \
-
-        --name ${var.vm_name}
- 
-      echo "-----------------------------------------"
-
-      echo "Waiting for VM to fully deallocate..."
-
-      az vm wait \
-
-        --resource-group ${var.resource_group_name} \
-
-        --name ${var.vm_name} \
-
-        --custom "instanceView.statuses[?code=='PowerState/deallocated']" \
-
-        --interval 10 \
-
-        --timeout 300
- 
-      # ✅ Verify deallocation
-
-      POWER_STATE=$(az vm show \
-
-        --resource-group ${var.resource_group_name} \
-
-        --name ${var.vm_name} \
-
-        --show-details \
-
-        --query "powerState" \
-
-        --output tsv)
-
-      echo "VM Power State: $POWER_STATE"
- 
-      echo "-----------------------------------------"
-
-      echo "STEP 3: Starting Generalization..."
- 
-      # Generalize VM
-
-      az vm generalize \
-
-        --resource-group ${var.resource_group_name} \
-
-        --name ${var.vm_name}
- 
-      # ✅ Verify generalization
-
-      OS_STATE=$(az vm get-instance-view \
-
-        --resource-group ${var.resource_group_name} \
-
-        --name ${var.vm_name} \
-
-        --query "instanceView.statuses[?starts_with(code,'OSState')].displayStatus" \
-
-        --output tsv)
-
-      echo "VM OS State: $OS_STATE"
- 
-      # ✅ Fail if not generalized
-
-      if [[ "$OS_STATE" != *"Generalized"* ]]; then
-
-        echo "ERROR: Generalization FAILED!"
-
-        exit 1
-
-      fi
- 
-      echo "========================================="
-
-      echo "Generalization SUCCESSFUL ✅"
-
-      echo "VM is ready for image capture"
-
-      echo "========================================="
-
-    EOT
-
-    interpreter = ["bash", "-c"]
-
-  }
-
-}
- 
-# ─────────────────────────────────────────
-
-# STEP 3 — Capture Golden Image
-
-# ─────────────────────────────────────────
-
-resource "azurerm_image" "golden_image" {
-
-  depends_on          = [null_resource.generalize_vm]
-
-  name                = "linuxGoldenImage"
-
-  location            = var.location
-
-  resource_group_name = var.resource_group_name
- 
-  source_virtual_machine_id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Compute/virtualMachines/${var.vm_name}"
- 
-  tags = {
-
-    CreatedBy = "Terraform"
-
-    Purpose   = "GoldenImage"
-
-  }
-
-}
- 
-
-resource "azurerm_shared_image_gallery" "sig" {
+# Get existing Compute Gallery
+data "azurerm_shared_image_gallery" "example" {
   name                = "linuxSig"
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  description         = "Shared images for organization"
-
-  lifecycle {
-    ignore_changes = [description]
-  }
-}
-resource "azurerm_shared_image" "sig_image" {
-  name                = "linuxGoldenImageDef"
-  gallery_name        = azurerm_shared_image_gallery.sig.name
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  os_type             = "Linux"
-
-  identifier {
-    publisher = "mycompany"
-    offer     = "linuxVM"
-    sku       = "rhel9"
-  }
-}
-resource "azurerm_shared_image_version" "sig_version" {
-  name                = "1.0.0"
-  gallery_name        = azurerm_shared_image_gallery.sig.name
-  image_name          = azurerm_shared_image.sig_image.name
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  managed_image_id    = azurerm_image.golden_image.id
-
-  target_region {
-    name                  = var.location
-    regional_replica_count = 1
-    storage_account_type   = "Standard_LRS"
-  }
-}
-data "azurerm_subnet" "existing" {
-  name                 = "linux-subnet"
-  virtual_network_name = var.vnet_name
-  resource_group_name  = var.resource_group_name
+  resource_group_name = "linux-rg"
 }
 
-resource "azurerm_network_interface" "new_vm_nic" {
-  name                = "${var.new_vm_name}-nic"
-  location            = var.location
-  resource_group_name = var.resource_group_name
+# Get existing Image inside gallery
+data "azurerm_shared_image" "example" {
+  name                = "vm-test"   # change if your image name is different
+  gallery_name        = data.azurerm_shared_image_gallery.example.name
+  resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
+}
+
+# Get existing Image Version
+data "azurerm_shared_image_version" "example" {
+  name                = "0.0.1"  # change if version is different
+  image_name          = data.azurerm_shared_image.example.name
+  gallery_name        = data.azurerm_shared_image_gallery.example.name
+  resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
+}
+
+# Network resources
+resource "azurerm_virtual_network" "example" {
+  name                = "example-network"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+resource "azurerm_subnet" "example" {
+  name                 = "internal"
+  resource_group_name  = azurerm_resource_group.example.name
+  virtual_network_name = azurerm_virtual_network.example.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_network_interface" "example" {
+  name                = "example-nic"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = data.azurerm_subnet.existing.id
+    subnet_id                     = azurerm_subnet.example.id
     private_ip_address_allocation = "Dynamic"
   }
 }
-resource "azurerm_linux_virtual_machine" "new_vm" {
-  name                  = var.new_vm_name
-  location              = var.location
-  resource_group_name   = var.resource_group_name
-  size                  = "Standard_B1s"
-  network_interface_ids = [azurerm_network_interface.new_vm_nic.id]
-  admin_username        = var.admin_username
-  disable_password_authentication = true
+
+# VM created from Compute Gallery image
+resource "azurerm_linux_virtual_machine" "example" {
+  name                = "example-machine"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  size                = "Standard_F2"
+  admin_username      = "adminuser"
+
+  network_interface_ids = [
+    azurerm_network_interface.example.id
+  ]
 
   admin_ssh_key {
-    username   = var.admin_username
+    username   = "adminuser"
     public_key = file("${path.module}/ssh/id_rsa.pub")
   }
 
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
-    disk_size_gb         = 30
   }
 
-  # Deploy from Shared Image Version
-  source_image_id = azurerm_shared_image_version.sig_version.id
+  source_image_id = data.azurerm_shared_image_version.example.id
 }
