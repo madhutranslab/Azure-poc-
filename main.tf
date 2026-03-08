@@ -315,6 +315,11 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
 # ─────────────────────────────────────────
 # STEP 1 — Deprovision Inside VM
 # ─────────────────────────────────────────
+data "azurerm_public_ip" "vm_ip" {
+  name                = var.public_ip_name
+  resource_group_name = var.resource_group_name
+}
+
 resource "null_resource" "deprovision_vm" {
   provisioner "remote-exec" {
     inline = [
@@ -322,7 +327,7 @@ resource "null_resource" "deprovision_vm" {
     ]
     connection {
       type        = "ssh"
-      host        = var.public_ip_name
+      host        = data.azurerm_public_ip.vm_ip.ip_address
       user        = var.admin_username
       private_key = file("${path.module}/ssh/id_rsa")
       timeout     = "5m"
