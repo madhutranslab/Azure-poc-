@@ -333,6 +333,7 @@ data "azurerm_shared_image" "example" {
   name                = "vm-test"
   gallery_name        = data.azurerm_shared_image_gallery.example.name
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
+  hyper_v_generation = "V1"
 }
 
 data "azurerm_shared_image_version" "example" {
