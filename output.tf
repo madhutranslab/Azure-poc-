@@ -80,3 +80,70 @@ output "new_vm_name" {
 output "new_vm_nic_id" {
   value = azurerm_network_interface.new_vm_nic.id
 }*/
+
+############################################################
+# Output Subscription and Tenant Info
+############################################################
+output "subscription_id" {
+  description = "Azure subscription ID used for deployment"
+  value       = data.azurerm_client_config.current.subscription_id
+}
+
+output "tenant_id" {
+  description = "Azure tenant ID"
+  value       = data.azurerm_client_config.current.tenant_id
+}
+
+############################################################
+# Output Managed Image Info
+############################################################
+output "golden_image_id" {
+  description = "Managed image ID created from existing VM"
+  value       = azurerm_image.golden_image.id
+}
+
+output "golden_image_name" {
+  description = "Managed image name"
+  value       = azurerm_image.golden_image.name
+}
+
+############################################################
+# Output Shared Image Gallery Info
+############################################################
+output "sig_name" {
+  description = "Shared Image Gallery name"
+  value       = azurerm_shared_image_gallery.sig.name
+}
+
+output "sig_location" {
+  description = "Location of the Shared Image Gallery"
+  value       = azurerm_shared_image_gallery.sig.location
+}
+
+output "shared_image_definition_name" {
+  description = "Shared Image Definition name"
+  value       = azurerm_shared_image.sig_image.name
+}
+
+output "shared_image_version" {
+  description = "Shared Image Version"
+  value       = azurerm_shared_image_version.sig_version.name
+}
+
+############################################################
+# Output New VM Info
+############################################################
+output "new_vm_name" {
+  description = "Name of the newly deployed VM"
+  value       = azurerm_linux_virtual_machine.new_vm.name
+}
+
+output "new_vm_private_ip" {
+  description = "Private IP address of the new VM"
+  value       = azurerm_network_interface.new_vm_nic.ip_configuration[0].private_ip_address
+}
+
+output "new_vm_nic_id" {
+  description = "NIC ID attached to the new VM"
+  value       = azurerm_network_interface.new_vm_nic.id
+}

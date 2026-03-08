@@ -309,3 +309,92 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
   # Use the Shared Image Gallery version
   source_image_id = azurerm_shared_image_version.linux_image_version.id
 }*/
+
+# Get subscription and tenant info
+data "azurerm_client_config" "current" {}
+
+resource "azurerm_image" "golden_image" {
+  name                = "linuxGoldenImage"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  source_virtual_machine_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Compute/virtualMachines/${var.vm_name}"
+}
+
+resource "azurerm_shared_image_gallery" "sig" {
+  name                = "linuxSig"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  description         = "Shared images for organization"
+
+  lifecycle {
+    ignore_changes = [description]
+  }
+}
+resource "azurerm_shared_image" "sig_image" {
+  name                = "linuxGoldenImageDef"
+  gallery_name        = azurerm_shared_image_gallery.sig.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  os_type             = "Linux"
+
+  identifier {
+    publisher = "mycompany"
+    offer     = "linuxVM"
+    sku       = "rhel9"
+  }
+}
+resource "azurerm_shared_image_version" "sig_version" {
+  name                = "1.0.0"
+  gallery_name        = azurerm_shared_image_gallery.sig.name
+  image_name          = azurerm_shared_image.sig_image.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  managed_image_id    = azurerm_image.golden_image.id
+
+  target_region {
+    name                  = var.location
+    regional_replica_count = 1
+    storage_account_type   = "Standard_LRS"
+  }
+}
+data "azurerm_subnet" "existing" {
+  name                 = "linux-subnet"
+  virtual_network_name = var.vnet_name
+  resource_group_name  = var.resource_group_name
+}
+
+resource "azurerm_network_interface" "new_vm_nic" {
+  name                = "${var.new_vm_name}-nic"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = data.azurerm_subnet.existing.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+resource "azurerm_linux_virtual_machine" "new_vm" {
+  name                  = var.new_vm_name
+  location              = var.location
+  resource_group_name   = var.resource_group_name
+  size                  = "Standard_B1s"
+  network_interface_ids = [azurerm_network_interface.new_vm_nic.id]
+  admin_username        = var.admin_username
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file("${path.module}/ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+    disk_size_gb         = 30
+  }
+
+  # Deploy from Shared Image Version
+  source_image_id = azurerm_shared_image_version.sig_version.id
+}

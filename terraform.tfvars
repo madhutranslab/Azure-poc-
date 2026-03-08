@@ -26,3 +26,4 @@ image_sku           = "9-lvm-gen2"
 sig_name            = "my_shared_gallery"
 image_definition_name = "linuxImageDef"
 
+new_vm_name = "madhu"

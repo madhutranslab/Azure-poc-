@@ -71,3 +71,7 @@ variable "sig_name" {
 variable "image_definition_name" {
   type = string
 }
+
+variable "new_vm_name" {
+  type = string
+}
