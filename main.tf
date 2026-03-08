@@ -357,12 +357,15 @@ resource "null_resource" "generalize_vm" {
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_image" "golden_image" {
+
+  depends_on = [null_resource.generalize_vm]
   name                = "linuxGoldenImage"
   location            = var.location
   resource_group_name = var.resource_group_name
 
   source_virtual_machine_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Compute/virtualMachines/${var.vm_name}"
 }
+
 
 resource "azurerm_shared_image_gallery" "sig" {
   name                = "linuxSig"
