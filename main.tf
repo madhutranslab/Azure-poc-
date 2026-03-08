@@ -1,5 +1,5 @@
 
-# Resource Group
+/*# Resource Group
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
@@ -96,7 +96,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 }
 
-/*############################################################
+############################################################
 # Shared Image Gallery
 ############################################################
 resource "azurerm_shared_image_gallery" "sig" {
