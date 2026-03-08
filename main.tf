@@ -311,6 +311,49 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
 }*/
 
 # Get subscription and tenant info
+
+# ─────────────────────────────────────────
+# STEP 1 — Deprovision Inside VM
+# ─────────────────────────────────────────
+resource "null_resource" "deprovision_vm" {
+  provisioner "remote-exec" {
+    inline = [
+      "sudo waagent -deprovision+user -force",
+    ]
+    connection {
+      type        = "ssh"
+      host        = var.public_ip_name
+      user        = var.admin_username
+      private_key = file("${path.module}/ssh/id_rsa.pub")
+      timeout     = "5m"
+    }
+  }
+}
+ 
+# ─────────────────────────────────────────
+# STEP 2 — Deallocate + Generalize VM
+# ─────────────────────────────────────────
+resource "null_resource" "generalize_vm" {
+  depends_on = [null_resource.deprovision_vm]
+ 
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Deallocating VM..."
+      az vm deallocate \
+        --resource-group ${var.resource_group_name} \
+        --name ${var.vm_name}
+ 
+      echo "Generalizing VM..."
+      az vm generalize \
+        --resource-group ${var.resource_group_name} \
+        --name ${var.vm_name}
+ 
+      echo "Done!"
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+}
+ 
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_image" "golden_image" {
