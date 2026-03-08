@@ -49,6 +49,7 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
+
 # Network Interface
 resource "azurerm_network_interface" "nic" {
   name                = var.nic_name
@@ -67,8 +68,6 @@ resource "azurerm_network_interface_security_group_association" "nic_nsg" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
-
-# Original Linux VM (to capture)
 
 resource "azurerm_linux_virtual_machine" "vm" {
   name                  = var.vm_name
@@ -96,23 +95,23 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 }
 
-/*data "azurerm_resource_group" "example" {
+data "azurerm_resource_group" "example" {
   name = "linux-rg"
 }
 
 data "azurerm_shared_image_gallery" "example" {
-  name                = "linuxSig"
+  name                = "madhu"
   resource_group_name = data.azurerm_resource_group.example.name
 }
 
 data "azurerm_shared_image" "example" {
-  name                = "vm-test"
+  name                = "madhu"
   gallery_name        = data.azurerm_shared_image_gallery.example.name
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
 }
 
 data "azurerm_shared_image_version" "example" {
-  name                = "0.0.1"
+  name                = "latest"
   image_name          = data.azurerm_shared_image.example.name
   gallery_name        = data.azurerm_shared_image_gallery.example.name
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
@@ -132,6 +131,12 @@ resource "azurerm_subnet" "example" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
+resource "azurerm_public_ip" "pip" {
+  name                = "example-pip"
+  location            = data.azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
+  allocation_method   = "Static"
+}
 resource "azurerm_network_interface" "example" {
   name                = "example"
   location            = data.azurerm_resource_group.example.location
@@ -141,6 +146,8 @@ resource "azurerm_network_interface" "example" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.example.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.pip.id
+
   }
 }
 
@@ -166,4 +173,4 @@ resource "azurerm_linux_virtual_machine" "example" {
   }
 
   source_image_id = data.azurerm_shared_image_version.example.id
-}*/
+}
