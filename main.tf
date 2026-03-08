@@ -326,43 +326,40 @@ data "azurerm_resource_group" "example" {
 
 data "azurerm_shared_image_gallery" "example" {
   name                = "linuxSig"
-  resource_group_name = data.azurerm_resource_group.example
+  resource_group_name = data.azurerm_resource_group.example.name
 }
 
-# Get existing Image inside gallery
 data "azurerm_shared_image" "example" {
-  name                = "vm-test"   # change if your image name is different
+  name                = "vm-test"
   gallery_name        = data.azurerm_shared_image_gallery.example.name
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
 }
 
-# Get existing Image Version
 data "azurerm_shared_image_version" "example" {
-  name                = "0.0.1"  # change if version is different
+  name                = "0.0.1"
   image_name          = data.azurerm_shared_image.example.name
   gallery_name        = data.azurerm_shared_image_gallery.example.name
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
 }
 
-# Network resources
 resource "azurerm_virtual_network" "example" {
   name                = "example-network"
   address_space       = ["10.0.0.0/16"]
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  location            = data.azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
 }
 
 resource "azurerm_subnet" "example" {
   name                 = "internal"
-  resource_group_name  = azurerm_resource_group.example.name
+  resource_group_name  = data.azurerm_resource_group.example.name
   virtual_network_name = azurerm_virtual_network.example.name
   address_prefixes     = ["10.0.2.0/24"]
 }
 
 resource "azurerm_network_interface" "example" {
   name                = "example-nic"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
+  location            = data.azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
 
   ip_configuration {
     name                          = "internal"
@@ -371,11 +368,10 @@ resource "azurerm_network_interface" "example" {
   }
 }
 
-# VM created from Compute Gallery image
 resource "azurerm_linux_virtual_machine" "example" {
   name                = "example-machine"
-  resource_group_name = azurerm_resource_group.example.name
-  location            = azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
+  location            = data.azurerm_resource_group.example.location
   size                = "Standard_F2"
   admin_username      = "adminuser"
 
