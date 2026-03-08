@@ -313,64 +313,217 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
 # Get subscription and tenant info
 
 # ─────────────────────────────────────────
+
 # STEP 1 — Deprovision Inside VM
+
 # ─────────────────────────────────────────
-data "azurerm_public_ip" "vm_ip" {
-  name                = var.public_ip_name
-  resource_group_name = var.resource_group_name
-}
 
 resource "null_resource" "deprovision_vm" {
-  provisioner "remote-exec" {
-    inline = [
-      "sudo waagent -deprovision+user -force",
-    ]
-    connection {
-      type        = "ssh"
-      host        = data.azurerm_public_ip.vm_ip.ip_address
-      user        = var.admin_username
-      private_key = file("${path.module}/ssh/id_rsa")
-      timeout     = "5m"
-    }
+ 
+  triggers = {
+
+    vm_name    = var.vm_name
+
+    always_run = timestamp()
+
   }
+ 
+  provisioner "remote-exec" {
+
+    inline = [
+
+      # ✅ Log start
+
+      "echo '========================================='",
+
+      "echo 'STEP 1: Starting VM Deprovision...'",
+
+      "echo 'Timestamp: ' $(date)",
+
+      "echo 'Hostname: ' $(hostname)",
+
+      "echo '========================================='",
+ 
+      # ✅ Run deprovision
+
+      "sudo waagent -deprovision+user -force 2>&1 | tee /tmp/deprovision.log",
+ 
+      # ✅ Log completion
+
+      "echo 'Deprovision Complete!'",
+
+      "cat /tmp/deprovision.log",
+
+      "echo '========================================='",
+
+    ]
+ 
+    connection {
+
+      type        = "ssh"
+
+      host        = data.azurerm_public_ip.vm_pip.ip_address
+
+      user        = var.admin_username
+
+      private_key = file(var.ssh_private_key_path)
+
+      timeout     = "5m"
+
+    }
+
+  }
+
 }
  
 # ─────────────────────────────────────────
+
 # STEP 2 — Deallocate + Generalize VM
+
 # ─────────────────────────────────────────
+
 resource "null_resource" "generalize_vm" {
+
   depends_on = [null_resource.deprovision_vm]
  
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "Deallocating VM..."
-      az vm deallocate \
-        --resource-group ${var.resource_group_name} \
-        --name ${var.vm_name}
- 
-      echo "Generalizing VM..."
-      az vm generalize \
-        --resource-group ${var.resource_group_name} \
-        --name ${var.vm_name}
- 
-      echo "Done!"
-    EOT
-    interpreter = ["bash", "-c"]
+  triggers = {
+
+    deprovision_id = null_resource.deprovision_vm.id
+
   }
+ 
+  provisioner "local-exec" {
+
+    command = <<EOT
+
+      echo "========================================="
+
+      echo "STEP 2: Starting Deallocation..."
+
+      echo "Timestamp: $(date)"
+
+      echo "========================================="
+ 
+      # Deallocate VM
+
+      az vm deallocate \
+
+        --resource-group ${var.resource_group_name} \
+
+        --name ${var.vm_name}
+ 
+      echo "-----------------------------------------"
+
+      echo "Waiting for VM to fully deallocate..."
+
+      az vm wait \
+
+        --resource-group ${var.resource_group_name} \
+
+        --name ${var.vm_name} \
+
+        --custom "instanceView.statuses[?code=='PowerState/deallocated']" \
+
+        --interval 10 \
+
+        --timeout 300
+ 
+      # ✅ Verify deallocation
+
+      POWER_STATE=$(az vm show \
+
+        --resource-group ${var.resource_group_name} \
+
+        --name ${var.vm_name} \
+
+        --show-details \
+
+        --query "powerState" \
+
+        --output tsv)
+
+      echo "VM Power State: $POWER_STATE"
+ 
+      echo "-----------------------------------------"
+
+      echo "STEP 3: Starting Generalization..."
+ 
+      # Generalize VM
+
+      az vm generalize \
+
+        --resource-group ${var.resource_group_name} \
+
+        --name ${var.vm_name}
+ 
+      # ✅ Verify generalization
+
+      OS_STATE=$(az vm get-instance-view \
+
+        --resource-group ${var.resource_group_name} \
+
+        --name ${var.vm_name} \
+
+        --query "instanceView.statuses[?starts_with(code,'OSState')].displayStatus" \
+
+        --output tsv)
+
+      echo "VM OS State: $OS_STATE"
+ 
+      # ✅ Fail if not generalized
+
+      if [[ "$OS_STATE" != *"Generalized"* ]]; then
+
+        echo "ERROR: Generalization FAILED!"
+
+        exit 1
+
+      fi
+ 
+      echo "========================================="
+
+      echo "Generalization SUCCESSFUL ✅"
+
+      echo "VM is ready for image capture"
+
+      echo "========================================="
+
+    EOT
+
+    interpreter = ["bash", "-c"]
+
+  }
+
 }
  
-data "azurerm_client_config" "current" {}
+# ─────────────────────────────────────────
+
+# STEP 3 — Capture Golden Image
+
+# ─────────────────────────────────────────
 
 resource "azurerm_image" "golden_image" {
 
-  depends_on = [null_resource.generalize_vm]
+  depends_on          = [null_resource.generalize_vm]
+
   name                = "linuxGoldenImage"
+
   location            = var.location
+
   resource_group_name = var.resource_group_name
+ 
+  source_virtual_machine_id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Compute/virtualMachines/${var.vm_name}"
+ 
+  tags = {
 
-  source_virtual_machine_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}/providers/Microsoft.Compute/virtualMachines/${var.vm_name}"
+    CreatedBy = "Terraform"
+
+    Purpose   = "GoldenImage"
+
+  }
+
 }
-
+ 
 
 resource "azurerm_shared_image_gallery" "sig" {
   name                = "linuxSig"
