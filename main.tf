@@ -318,15 +318,15 @@ resource "azurerm_linux_virtual_machine" "new_vm" {
 
 # ─────────────────────────────────────────
 
-resource "azurerm_resource_group" "example" {
-  name     = "linux-rg"
-  location = "Australia East"
+# Get existing Compute Gallery
+
+data "azurerm_resource_group" "example" {
+  name = "linux-rg"
 }
 
-# Get existing Compute Gallery
 data "azurerm_shared_image_gallery" "example" {
   name                = "linuxSig"
-  resource_group_name = "linux-rg"
+  resource_group_name = data.azurerm_resource_group.example
 }
 
 # Get existing Image inside gallery
