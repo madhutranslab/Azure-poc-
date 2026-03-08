@@ -1,4 +1,4 @@
-/*# Output the Resource Group name
+# Output the Resource Group name
 output "resource_group_name" {
   description = "The name of the resource group"
   value       = azurerm_resource_group.rg.name
@@ -79,13 +79,13 @@ output "new_vm_name" {
 
 output "new_vm_nic_id" {
   value = azurerm_network_interface.new_vm_nic.id
-}*/
+}
 
 ############################################################
 # Output Subscription and Tenant Info
 ############################################################
 
-output "vm_name" {
+/*output "vm_name" {
   description = "Virtual Machine Name"
   value       = azurerm_linux_virtual_machine.example.name
 }
@@ -118,4 +118,4 @@ output "shared_image_name" {
 output "shared_image_version_id" {
   description = "Shared Image Version ID"
   value       = data.azurerm_shared_image_version.example.id
-}
+}*/
