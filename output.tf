@@ -44,7 +44,7 @@ output "nic_id" {
   value       = azurerm_network_interface.nic.id
 }
 
-# Output Linux VM
+/*# Output Linux VM
 output "vm_name" {
   description = "The name of the Linux VM"
   value       = azurerm_linux_virtual_machine.vm.name
@@ -79,4 +79,4 @@ output "new_vm_name" {
 
 output "new_vm_nic_id" {
   value = azurerm_network_interface.new_vm_nic.id
-}
+}*/
