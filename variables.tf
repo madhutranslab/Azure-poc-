@@ -1,4 +1,4 @@
-variable "resource_group_name" {
+/*variable "resource_group_name" {
   description = "Resource Group Name"
   type        = string
 }
@@ -76,3 +76,20 @@ variable "public_ip_required" {
   type        = bool
   default     = false
 }
+*/
+
+variable "environment" {}
+variable "resource_group" {}
+variable "virtual_network_name" {}
+variable "vnet_address_prefix" {}
+variable "subnet_name" {}
+variable "subnet_address_prefix" {}
+variable "public_ip_required" { type = bool }
+
+variable "virtual_machine_name" {}
+variable "vm_size" {}
+variable "admin_username" {}
+
+variable "shared_gallery" {}
+variable "image_definition_name" {}
+variable "shared_image_version" {}
