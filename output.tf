@@ -1,5 +1,5 @@
 # Output the Resource Group name
-output "resource_group_name" {
+/*output "resource_group_name" {
   description = "The name of the resource group"
   value       = azurerm_resource_group.rg.name
 }
@@ -54,7 +54,7 @@ output "vm_public_ip" {
   description = "The public IP of the Linux VM"
   value       = azurerm_public_ip.pip.ip_address
 }
-
+*/
 #####################################################################
 
 output "vm_id" {
