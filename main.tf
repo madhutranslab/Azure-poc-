@@ -95,6 +95,11 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 }
 
+#################################################################################################################################
+
+
+# Data Sources
+
 data "azurerm_resource_group" "example" {
   name = "linux-rg"
 }
@@ -117,6 +122,8 @@ data "azurerm_shared_image_version" "example" {
   resource_group_name = data.azurerm_shared_image_gallery.example.resource_group_name
 }
 
+# Networking
+
 resource "azurerm_virtual_network" "example" {
   name                = "example-network11"
   address_space       = ["10.0.0.0/16"]
@@ -131,14 +138,38 @@ resource "azurerm_subnet" "example" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
-resource "azurerm_public_ip" "pip-1" {
+resource "azurerm_network_security_group" "example" {
+  name                = "example-nsg"
+  location            = data.azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "example" {
+  subnet_id                 = azurerm_subnet.example.id
+  network_security_group_id = azurerm_network_security_group.example.id
+}
+
+resource "azurerm_public_ip" "pip" {
   name                = "example-pip"
   location            = data.azurerm_resource_group.example.location
   resource_group_name = data.azurerm_resource_group.example.name
   allocation_method   = "Static"
 }
+
 resource "azurerm_network_interface" "example" {
-  name                = "example"
+  name                = "example-nic"
   location            = data.azurerm_resource_group.example.location
   resource_group_name = data.azurerm_resource_group.example.name
 
@@ -146,16 +177,18 @@ resource "azurerm_network_interface" "example" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.example.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip-1.id
-
+    public_ip_address_id          = azurerm_public_ip.pip.id
   }
 }
+
+
+# Virtual Machine
 
 resource "azurerm_linux_virtual_machine" "example" {
   name                = "example-machine"
   resource_group_name = data.azurerm_resource_group.example.name
   location            = data.azurerm_resource_group.example.location
-  size                =  "Standard_D2s_v3"
+  size                = "Standard_D2s_v3"
   admin_username      = "adminuser"
 
   network_interface_ids = [
@@ -173,37 +206,4 @@ resource "azurerm_linux_virtual_machine" "example" {
   }
 
   source_image_id = data.azurerm_shared_image_version.example.id
-}
-resource "azurerm_network_security_group" "example" {
-  name                = "example-nsg"
-  location            = data.azurerm_resource_group.example.location
-  resource_group_name = data.azurerm_resource_group.example.name
-
-  security_rule {
-    name                       = "SSH"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "AllowHTTP"
-    priority                   = 1002
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-}
-resource "azurerm_subnet_network_security_group_association" "example" {
-  subnet_id                 = azurerm_subnet.example.id
-  network_security_group_id = azurerm_network_security_group.example.id
 }
