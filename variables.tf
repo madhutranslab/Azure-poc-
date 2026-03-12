@@ -24,10 +24,6 @@ variable "subnet_address_prefix" {
   type = list(string)
 }
 
-variable "public_ip_name" {
-  type = string
-}
-
 variable "nsg_name" {
   type = string
 }
@@ -74,4 +70,9 @@ variable "image_definition_name" {
 
 variable "new_vm_name" {
   type = string
+}
+variable "public_ip_required" {
+  description = "Create Public IP if true"
+  type        = bool
+  default     = false
 }

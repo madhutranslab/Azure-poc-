@@ -162,6 +162,7 @@ resource "azurerm_subnet_network_security_group_association" "example" {
 }
 
 resource "azurerm_public_ip" "pip" {
+  count               = var.public_ip_required ? 1 : 0
   name                = "example-pip"
   location            = data.azurerm_resource_group.example.location
   resource_group_name = data.azurerm_resource_group.example.name
@@ -177,7 +178,7 @@ resource "azurerm_network_interface" "example" {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.example.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.pip.id
+    public_ip_address_id          = var.public_ip_required ? azurerm_public_ip.pip[0].id : null
   }
 }
 
